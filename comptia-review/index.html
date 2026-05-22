@@ -13,7 +13,6 @@ button { background:#0078d4; color:white; cursor:pointer;}
 .option { padding:10px; margin:5px 0; border-radius:6px; background:#eef2f7; cursor:pointer;}
 .option:hover { background:#dbe7f3;}
 .feedback { margin-top:15px; font-weight:bold;}
-.question { font-size:1.1em; margin-bottom:10px;}
 </style>
 </head>
 <body>
@@ -50,7 +49,7 @@ button { background:#0078d4; color:white; cursor:pointer;}
 </div>
 
 <div class="card" id="quiz" style="display:none;">
-<div id="question" class="question"></div>
+<div id="question"></div>
 <div id="options"></div>
 <div id="feedback" class="feedback"></div>
 <button id="nextBtn" style="display:none;" onclick="nextQuestion()">Next</button>
@@ -60,86 +59,145 @@ button { background:#0078d4; color:white; cursor:pointer;}
 </div>
 
 <script>
-// More realistic CompTIA-style question generator
-function generateQuestion(exam, obj, difficulty) {
+// Question bank with multiple variations
+const questionBank = {
+Hardware: [
+    () => makeQ(
+        "A technician installs a new storage device. Which interface provides the fastest performance?",
+        ["SATA II","SATA III","NVMe PCIe","IDE"],
+        2,
+        "NVMe uses PCIe lanes for much faster speeds than SATA.",
+        "NVMe drives outperform SATA-based drives due to direct PCIe communication."
+    ),
+    () => makeQ(
+        "Which component is MOST likely to affect system performance when multitasking?",
+        ["CPU","RAM","Power supply","Case fan"],
+        1,
+        "RAM impacts multitasking efficiency directly.",
+        "More RAM allows more programs to run simultaneously without slowdown."
+    ),
+    () => makeQ(
+        "A user reports slow boot times. Which upgrade is BEST?",
+        ["Add HDD","Upgrade CPU","Install SSD","Add GPU"],
+        2,
+        "SSDs drastically reduce boot times.",
+        "SSD storage greatly improves read/write speed compared to HDD."
+    )
+],
 
-    const scenarios = {
-        Hardware: [
-            {
-                q: "A technician is installing a new SSD in a workstation. Which interface provides the FASTEST data transfer speeds?",
-                options: ["SATA II", "SATA III", "NVMe over PCIe", "IDE"],
-                answer: 2,
-                explanation: "NVMe over PCIe offers significantly faster transfer speeds than SATA or IDE.",
-                tutorial: "NVMe uses PCIe lanes and is much faster than traditional SATA-based drives."
-            }
-        ],
-        Networking: [
-            {
-                q: "A network administrator needs to segment traffic between departments while maintaining a single physical switch. What should be implemented?",
-                options: ["VPN", "VLAN", "NAT", "DNS"],
-                answer: 1,
-                explanation: "VLANs logically segment networks on the same physical hardware.",
-                tutorial: "VLANs allow separation of broadcast domains without additional physical devices."
-            }
-        ],
-        Security: [
-            {
-                q: "A user receives an email asking them to verify their account by clicking a link. This is an example of:",
-                options: ["Malware", "Phishing", "DDoS", "Encryption"],
-                answer: 1,
-                explanation: "Phishing attempts trick users into revealing sensitive information.",
-                tutorial: "Phishing is a social engineering attack often delivered via email."
-            }
-        ],
-        Troubleshooting: [
-            {
-                q: "A computer intermittently loses network connectivity. What is the FIRST step in troubleshooting?",
-                options: [
-                    "Replace the network card",
-                    "Identify the problem",
-                    "Escalate the issue",
-                    "Implement a fix"
-                ],
-                answer: 1,
-                explanation: "The first step is always to identify and verify the problem.",
-                tutorial: "CompTIA troubleshooting methodology starts with identifying symptoms."
-            }
-        ]
-    };
+Networking: [
+    () => makeQ(
+        "A company wants to segment network traffic without new hardware. What should be used?",
+        ["VPN","VLAN","DNS","NAT"],
+        1,
+        "VLANs logically separate networks.",
+        "VLANs create isolated broadcast domains on the same switch."
+    ),
+    () => makeQ(
+        "Which protocol is used to automatically assign IP addresses?",
+        ["DNS","DHCP","FTP","SNMP"],
+        1,
+        "DHCP dynamically assigns IP addresses.",
+        "DHCP simplifies network configuration by assigning IPs automatically."
+    ),
+    () => makeQ(
+        "A technician needs to test connectivity. Which command should be used?",
+        ["ipconfig","ping","tracert","netstat"],
+        1,
+        "Ping tests connectivity.",
+        "Ping sends ICMP echo requests to verify reachability."
+    )
+],
 
-    // Difficulty adjustment
-    let base = scenarios[obj][0];
-    let question = { ...base };
+Security: [
+    () => makeQ(
+        "A user clicks a fake email link. What attack occurred?",
+        ["Malware","Phishing","DDoS","Brute force"],
+        1,
+        "Phishing tricks users into revealing info.",
+        "Phishing is a social engineering method using fake communications."
+    ),
+    () => makeQ(
+        "Which method protects data confidentiality?",
+        ["Hashing","Encryption","Firewall","Proxy"],
+        1,
+        "Encryption secures data.",
+        "Encryption converts data into unreadable format without keys."
+    ),
+    () => makeQ(
+        "What device filters incoming network traffic?",
+        ["Router","Firewall","Switch","Access point"],
+        1,
+        "Firewalls filter traffic.",
+        "Firewalls control incoming/outgoing traffic based on rules."
+    )
+],
 
-    if (difficulty === "medium") {
-        question.q = "A technician is troubleshooting in a real-world scenario: " + base.q;
-    }
+Troubleshooting: [
+    () => makeQ(
+        "What is the FIRST step in troubleshooting?",
+        ["Test theory","Identify problem","Fix issue","Document"],
+        1,
+        "Always identify the issue first.",
+        "CompTIA methodology starts with identifying problem symptoms."
+    ),
+    () => makeQ(
+        "A solution has been applied. What is the NEXT step?",
+        ["Document","Verify functionality","Establish theory","Escalate"],
+        1,
+        "Verify the fix worked.",
+        "Always confirm the solution resolves the issue."
+    ),
+    () => makeQ(
+        "A problem cannot be solved. What should be done?",
+        ["Ignore it","Escalate","Reboot","Replace all parts"],
+        1,
+        "Escalation is appropriate when needed.",
+        "Unresolved issues should be escalated to higher support."
+    )
+]
+};
 
-    if (difficulty === "hard") {
-        question.q = "A company environment presents this issue: " + base.q + " What is the BEST solution?";
-    }
+// Helper
+function makeQ(q, options, answer, explanation, tutorial){
+    return {q, options, answer, explanation, tutorial};
+}
 
-    return question;
+// Shuffle
+function shuffle(arr){
+    return arr.sort(()=>Math.random()-0.5);
+}
+
+// Generate unique questions
+function generateQuestions(obj, num, difficulty){
+    let pool = questionBank[obj].map(fn=>fn());
+
+    // Add difficulty flavor
+    pool = pool.map(q => {
+        if(difficulty==="medium")
+            q.q = "Scenario: " + q.q;
+        if(difficulty==="hard")
+            q.q = "In a corporate environment: " + q.q + " What is the BEST answer?";
+        return q;
+    });
+
+    // Shuffle and return unique set
+    return shuffle(pool).slice(0, num);
 }
 
 // State
 let questions=[], current=0, correctCount=0;
 
-// Start quiz
+// Start
 function startQuiz(){
-    const exam = document.getElementById("exam").value;
-    const obj = document.getElementById("objective").value;
-    const difficulty = document.getElementById("difficulty").value;
-    const num = parseInt(document.getElementById("num").value);
+    let obj = document.getElementById("objective").value;
+    let num = parseInt(document.getElementById("num").value);
+    let difficulty = document.getElementById("difficulty").value;
 
-    questions=[];
-    for(let i=0;i<num;i++){
-        questions.push(generateQuestion(exam,obj,difficulty));
-    }
+    questions = generateQuestions(obj, num, difficulty);
 
     current=0;
     correctCount=0;
-    saveProgress();
 
     document.getElementById("setup").style.display="none";
     document.getElementById("quiz").style.display="block";
@@ -147,12 +205,12 @@ function startQuiz(){
     showQuestion();
 }
 
-// Show question
+// Show
 function showQuestion(){
     if(current>=questions.length){ showResult(); return; }
 
     let q=questions[current];
-    document.getElementById("question").innerHTML=`<strong>Question ${current+1}:</strong> ${q.q}`;
+    document.getElementById("question").innerHTML=`<h3>Question ${current+1}</h3>${q.q}`;
 
     let optDiv=document.getElementById("options");
     optDiv.innerHTML="";
@@ -168,21 +226,20 @@ function showQuestion(){
     });
 }
 
-// Check answer
+// Answer
 function checkAnswer(i){
     let q=questions[current];
     let fb=document.getElementById("feedback");
 
     if(i===q.answer){
         correctCount++;
-        fb.innerHTML="✅ Correct! Nice work—this aligns with CompTIA style reasoning.";
+        fb.innerHTML="✅ Correct!";
         document.getElementById("nextBtn").style.display="block";
     } else {
         fb.innerHTML=`❌ Incorrect.<br>${q.explanation}
         <br><button onclick="showTutorial()">Show Tutorial</button>
         <button onclick="nextQuestion()">Skip</button>`;
     }
-    saveProgress();
 }
 
 // Tutorial
@@ -195,7 +252,6 @@ function showTutorial(){
 // Next
 function nextQuestion(){
     current++;
-    saveProgress();
     showQuestion();
 }
 
@@ -207,12 +263,6 @@ function showResult(){
     r.style.display="block";
     r.innerHTML=`<h2>Finished!</h2><p>Score: ${percent}%</p>
     <button onclick="location.reload()">Restart</button>`;
-    localStorage.removeItem("progress");
-}
-
-// Save progress
-function saveProgress(){
-    localStorage.setItem("progress",JSON.stringify({current,correctCount}));
 }
 </script>
 </body>
