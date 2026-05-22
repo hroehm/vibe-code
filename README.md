@@ -1,2 +1,2 @@
 # vibe-code
-Google Ecosystem vibe coded files are stored here
+Vibe coded folders contain files needed to execute applicaitons
