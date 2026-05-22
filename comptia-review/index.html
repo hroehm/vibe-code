@@ -13,6 +13,7 @@ button { background:#0078d4; color:white; cursor:pointer;}
 .option { padding:10px; margin:5px 0; border-radius:6px; background:#eef2f7; cursor:pointer;}
 .option:hover { background:#dbe7f3;}
 .feedback { margin-top:15px; font-weight:bold;}
+.question { font-size:1.1em; margin-bottom:10px;}
 </style>
 </head>
 <body>
@@ -49,7 +50,7 @@ button { background:#0078d4; color:white; cursor:pointer;}
 </div>
 
 <div class="card" id="quiz" style="display:none;">
-<div id="question"></div>
+<div id="question" class="question"></div>
 <div id="options"></div>
 <div id="feedback" class="feedback"></div>
 <button id="nextBtn" style="display:none;" onclick="nextQuestion()">Next</button>
@@ -59,48 +60,72 @@ button { background:#0078d4; color:white; cursor:pointer;}
 </div>
 
 <script>
-// Simulated AI generator
+// More realistic CompTIA-style question generator
 function generateQuestion(exam, obj, difficulty) {
-    const templates = [
-        `${exam} (${difficulty}) - What is a key concept of ${obj}?`,
-        `In ${exam}, which best describes ${obj}?`,
-        `Choose the correct statement about ${obj} (${difficulty}).`,
-        `Which is TRUE about ${obj} in ${exam}?`
-    ];
 
-    const correctAnswers = {
-        "Hardware":"Physical components of a computer",
-        "Networking":"Devices communicate using protocols",
-        "Security":"Protecting systems and data from threats",
-        "Troubleshooting":"Systematic problem-solving process"
+    const scenarios = {
+        Hardware: [
+            {
+                q: "A technician is installing a new SSD in a workstation. Which interface provides the FASTEST data transfer speeds?",
+                options: ["SATA II", "SATA III", "NVMe over PCIe", "IDE"],
+                answer: 2,
+                explanation: "NVMe over PCIe offers significantly faster transfer speeds than SATA or IDE.",
+                tutorial: "NVMe uses PCIe lanes and is much faster than traditional SATA-based drives."
+            }
+        ],
+        Networking: [
+            {
+                q: "A network administrator needs to segment traffic between departments while maintaining a single physical switch. What should be implemented?",
+                options: ["VPN", "VLAN", "NAT", "DNS"],
+                answer: 1,
+                explanation: "VLANs logically segment networks on the same physical hardware.",
+                tutorial: "VLANs allow separation of broadcast domains without additional physical devices."
+            }
+        ],
+        Security: [
+            {
+                q: "A user receives an email asking them to verify their account by clicking a link. This is an example of:",
+                options: ["Malware", "Phishing", "DDoS", "Encryption"],
+                answer: 1,
+                explanation: "Phishing attempts trick users into revealing sensitive information.",
+                tutorial: "Phishing is a social engineering attack often delivered via email."
+            }
+        ],
+        Troubleshooting: [
+            {
+                q: "A computer intermittently loses network connectivity. What is the FIRST step in troubleshooting?",
+                options: [
+                    "Replace the network card",
+                    "Identify the problem",
+                    "Escalate the issue",
+                    "Implement a fix"
+                ],
+                answer: 1,
+                explanation: "The first step is always to identify and verify the problem.",
+                tutorial: "CompTIA troubleshooting methodology starts with identifying symptoms."
+            }
+        ]
     };
 
-    const wrongAnswers = [
-        "It increases internet speed automatically",
-        "It replaces the operating system",
-        "It removes all viruses permanently"
-    ];
+    // Difficulty adjustment
+    let base = scenarios[obj][0];
+    let question = { ...base };
 
-    let q = templates[Math.floor(Math.random()*templates.length)];
+    if (difficulty === "medium") {
+        question.q = "A technician is troubleshooting in a real-world scenario: " + base.q;
+    }
 
-    let correct = correctAnswers[obj] || "Correct answer";
+    if (difficulty === "hard") {
+        question.q = "A company environment presents this issue: " + base.q + " What is the BEST solution?";
+    }
 
-    let options = [...wrongAnswers];
-    options.splice(Math.floor(Math.random()*4), 0, correct);
-
-    return {
-        question: q,
-        options: options,
-        answer: options.indexOf(correct),
-        explanation: `The correct answer is: ${correct}.`,
-        tutorial: `${obj} involves understanding that: ${correct}.`
-    };
+    return question;
 }
 
 // State
 let questions=[], current=0, correctCount=0;
 
-// Start
+// Start quiz
 function startQuiz(){
     const exam = document.getElementById("exam").value;
     const obj = document.getElementById("objective").value;
@@ -122,12 +147,12 @@ function startQuiz(){
     showQuestion();
 }
 
-// Show
+// Show question
 function showQuestion(){
     if(current>=questions.length){ showResult(); return; }
 
     let q=questions[current];
-    document.getElementById("question").innerHTML=`<h3>Question ${current+1}</h3><p>${q.question}</p>`;
+    document.getElementById("question").innerHTML=`<strong>Question ${current+1}:</strong> ${q.q}`;
 
     let optDiv=document.getElementById("options");
     optDiv.innerHTML="";
@@ -143,14 +168,14 @@ function showQuestion(){
     });
 }
 
-// Answer
+// Check answer
 function checkAnswer(i){
     let q=questions[current];
     let fb=document.getElementById("feedback");
 
     if(i===q.answer){
         correctCount++;
-        fb.innerHTML="✅ Correct!";
+        fb.innerHTML="✅ Correct! Nice work—this aligns with CompTIA style reasoning.";
         document.getElementById("nextBtn").style.display="block";
     } else {
         fb.innerHTML=`❌ Incorrect.<br>${q.explanation}
@@ -185,7 +210,7 @@ function showResult(){
     localStorage.removeItem("progress");
 }
 
-// Storage
+// Save progress
 function saveProgress(){
     localStorage.setItem("progress",JSON.stringify({current,correctCount}));
 }
