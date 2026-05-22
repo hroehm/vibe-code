@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CompTIA AI Tutor</title>
+<style>
+body { font-family: Arial; background:#f4f6f8; margin:0;}
+.container { max-width:800px; margin:auto; padding:20px;}
+.card { background:white; padding:20px; border-radius:10px; margin-top:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+h1 { text-align:center;}
+select,input,button { width:100%; padding:10px; margin-top:10px; border-radius:6px; border:1px solid #ccc;}
+button { background:#0078d4; color:white; cursor:pointer;}
+.option { padding:10px; margin:5px 0; border-radius:6px; background:#eef2f7; cursor:pointer;}
+.option:hover { background:#dbe7f3;}
+.feedback { margin-top:15px; font-weight:bold;}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>CompTIA AI Tutor</h1>
+
+<div class="card" id="setup">
+<label>Exam:</label>
+<select id="exam">
+<option>A+</option>
+<option>Network+</option>
+<option>Security+</option>
+</select>
+
+<label>Objective:</label>
+<select id="objective">
+<option>Hardware</option>
+<option>Networking</option>
+<option>Security</option>
+<option>Troubleshooting</option>
+</select>
+
+<label>Difficulty:</label>
+<select id="difficulty">
+<option>easy</option>
+<option>medium</option>
+<option>hard</option>
+</select>
+
+<label>Number of Questions:</label>
+<input type="number" id="num" value="5" min="1" max="20">
+
+<button onclick="startQuiz()">Start</button>
+</div>
+
+<div class="card" id="quiz" style="display:none;">
+<div id="question"></div>
+<div id="options"></div>
+<div id="feedback" class="feedback"></div>
+<button id="nextBtn" style="display:none;" onclick="nextQuestion()">Next</button>
+</div>
+
+<div class="card" id="result" style="display:none;"></div>
+</div>
+
+<script>
+// Simulated AI generator
+function generateQuestion(exam, obj, difficulty) {
+    const templates = [
+        `${exam} (${difficulty}) - What is a key concept of ${obj}?`,
+        `In ${exam}, which best describes ${obj}?`,
+        `Choose the correct statement about ${obj} (${difficulty}).`,
+        `Which is TRUE about ${obj} in ${exam}?`
+    ];
+
+    const correctAnswers = {
+        "Hardware":"Physical components of a computer",
+        "Networking":"Devices communicate using protocols",
+        "Security":"Protecting systems and data from threats",
+        "Troubleshooting":"Systematic problem-solving process"
+    };
+
+    const wrongAnswers = [
+        "It increases internet speed automatically",
+        "It replaces the operating system",
+        "It removes all viruses permanently"
+    ];
+
+    let q = templates[Math.floor(Math.random()*templates.length)];
+
+    let correct = correctAnswers[obj] || "Correct answer";
+
+    let options = [...wrongAnswers];
+    options.splice(Math.floor(Math.random()*4), 0, correct);
+
+    return {
+        question: q,
+        options: options,
+        answer: options.indexOf(correct),
+        explanation: `The correct answer is: ${correct}.`,
+        tutorial: `${obj} involves understanding that: ${correct}.`
+    };
+}
+
+// State
+let questions=[], current=0, correctCount=0;
+
+// Start
+function startQuiz(){
+    const exam = document.getElementById("exam").value;
+    const obj = document.getElementById("objective").value;
+    const difficulty = document.getElementById("difficulty").value;
+    const num = parseInt(document.getElementById("num").value);
+
+    questions=[];
+    for(let i=0;i<num;i++){
+        questions.push(generateQuestion(exam,obj,difficulty));
+    }
+
+    current=0;
+    correctCount=0;
+    saveProgress();
+
+    document.getElementById("setup").style.display="none";
+    document.getElementById("quiz").style.display="block";
+
+    showQuestion();
+}
+
+// Show
+function showQuestion(){
+    if(current>=questions.length){ showResult(); return; }
+
+    let q=questions[current];
+    document.getElementById("question").innerHTML=`<h3>Question ${current+1}</h3><p>${q.question}</p>`;
+
+    let optDiv=document.getElementById("options");
+    optDiv.innerHTML="";
+    document.getElementById("feedback").innerHTML="";
+    document.getElementById("nextBtn").style.display="none";
+
+    q.options.forEach((opt,i)=>{
+        let div=document.createElement("div");
+        div.className="option";
+        div.innerText=opt;
+        div.onclick=()=>checkAnswer(i);
+        optDiv.appendChild(div);
+    });
+}
+
+// Answer
+function checkAnswer(i){
+    let q=questions[current];
+    let fb=document.getElementById("feedback");
+
+    if(i===q.answer){
+        correctCount++;
+        fb.innerHTML="✅ Correct!";
+        document.getElementById("nextBtn").style.display="block";
+    } else {
+        fb.innerHTML=`❌ Incorrect.<br>${q.explanation}
+        <br><button onclick="showTutorial()">Show Tutorial</button>
+        <button onclick="nextQuestion()">Skip</button>`;
+    }
+    saveProgress();
+}
+
+// Tutorial
+function showTutorial(){
+    let q=questions[current];
+    document.getElementById("feedback").innerHTML+=`<p><em>${q.tutorial}</em></p>
+    <button onclick="nextQuestion()">Continue</button>`;
+}
+
+// Next
+function nextQuestion(){
+    current++;
+    saveProgress();
+    showQuestion();
+}
+
+// Result
+function showResult(){
+    let percent=Math.round((correctCount/questions.length)*100);
+    document.getElementById("quiz").style.display="none";
+    let r=document.getElementById("result");
+    r.style.display="block";
+    r.innerHTML=`<h2>Finished!</h2><p>Score: ${percent}%</p>
+    <button onclick="location.reload()">Restart</button>`;
+    localStorage.removeItem("progress");
+}
+
+// Storage
+function saveProgress(){
+    localStorage.setItem("progress",JSON.stringify({current,correctCount}));
+}
+</script>
+</body>
+</html>
