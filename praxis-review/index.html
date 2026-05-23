@@ -1,1 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Praxis Review App (Offline AI)</title>
 
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f7fb;
+    margin: 0;
+    text-align: center;
+}
+
+.container {
+    max-width: 800px;
+    margin: auto;
+    padding: 20px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+button {
+    padding: 10px 15px;
+    margin: 5px;
+    border: none;
+    border-radius: 6px;
+    background: #0078d4;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover { background: #005fa3; }
+
+.correct { color: green; font-weight: bold; }
+.incorrect { color: red; font-weight: bold; }
+
+.hidden { display: none; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Praxis Review (Offline Mode)</h1>
+
+<div class="card" id="setup">
+<h3>Start Practice</h3>
+
+<select id="testType">
+<option value="math">Core Math</option>
+<option value="reading">Core Reading</option>
+<option value="writing">Core Writing</option>
+</select><br><br>
+
+<input type="number" id="numQ" value="5" min="1" max="20"><br><br>
+
+<button onclick="start()">Start</button>
+</div>
+
+<div class="card hidden" id="quiz">
+<h3 id="progress"></h3>
+<p id="question"></p>
+<div id="answers"></div>
+<p id="feedback"></p>
+<button id="nextBtn" class="hidden" onclick="next()">Next</button>
+</div>
+
+<div class="card hidden" id="results">
+<h3>Results</h3>
+<p id="score"></p>
+<button onclick="location.reload()">Restart</button>
+</div>
+
+</div>
+
+<script>
+
+let questions = [];
+let current = 0;
+let correct = 0;
+let wrong = 0;
+
+// QUESTION GENERATORS
+function generateMathQ() {
+    let a = Math.floor(Math.random()*10);
+    let b = Math.floor(Math.random()*10);
+    let answer = a + b;
+
+    return {
+        question: `What is ${a} + ${b}?`,
+        options: shuffle([answer, answer+1, answer-1, answer+2]),
+        answer: String(answer),
+        rationale: `Add ${a} and ${b} to get ${answer}.`
+    };
+}
+
+function generateReadingQ() {
+    const passages = [
+        {
+            text: "The sun provides energy for life on Earth.",
+            question: "What is the main idea?",
+            answer: "The sun is essential for life"
+        },
+        {
+            text: "Reading daily improves vocabulary skills.",
+            question: "What is the main idea?",
+            answer: "Reading helps vocabulary"
+        }
+    ];
+
+    let p = passages[Math.floor(Math.random()*passages.length)];
+
+    return {
+        question: `${p.text} ${p.question}`,
+        options: shuffle([
+            p.answer,
+            "The sun is a star",
+            "Books are useful",
+            "Vocabulary is hard"
+        ]),
+        answer: p.answer,
+        rationale: "The main idea summarizes the key point of the sentence."
+    };
+}
+
+function generateWritingQ() {
+    return {
+        question: "Which sentence is grammatically correct?",
+        options: shuffle([
+            "She doesn't like apples.",
+            "She don't like apples.",
+            "She not like apples.",
+            "She doesn't likes apples."
+        ]),
+        answer: "She doesn't like apples.",
+        rationale: "Use 'doesn't' with base verb form."
+    };
+}
+
+function generateQuestions(type, count) {
+    let qs = [];
+    for (let i=0; i<count; i++) {
+        if (type === "math") qs.push(generateMathQ());
+        if (type === "reading") qs.push(generateReadingQ());
+        if (type === "writing") qs.push(generateWritingQ());
+    }
+    return qs;
+}
+
+// SHUFFLE
+function shuffle(arr) {
+    return arr.map(v => ({v, r: Math.random()}))
+        .sort((a,b)=>a.r-b.r)
+        .map(({v})=>v);
+}
+
+// START
+function start() {
+    const type = document.getElementById("testType").value;
+    const num = document.getElementById("numQ").value;
+
+    questions = generateQuestions(type, num);
+
+    document.getElementById("setup").classList.add("hidden");
+    document.getElementById("quiz").classList.remove("hidden");
+
+    show();
+}
+
+// SHOW Q
+function show() {
+    let q = questions[current];
+
+    document.getElementById("progress").innerText =
+        `Question ${current+1}/${questions.length}`;
+
+    document.getElementById("question").innerText = q.question;
+
+    let div = document.getElementById("answers");
+    div.innerHTML = "";
+
+    q.options.forEach(opt => {
+        let btn = document.createElement("button");
+        btn.innerText = opt;
+        btn.onclick = () => check(opt);
+        div.appendChild(btn);
+    });
+
+    document.getElementById("feedback").innerText = "";
+    document.getElementById("nextBtn").classList.add("hidden");
+}
+
+// CHECK
+function check(ans) {
+    let q = questions[current];
+    let fb = document.getElementById("feedback");
+
+    if (ans === q.answer) {
+        correct++;
+        fb.className = "correct";
+        fb.innerText = "✅ Correct!";
+    } else {
+        wrong++;
+        fb.className = "incorrect";
+        fb.innerHTML = `❌ Incorrect<br>
+            Correct Answer: ${q.answer}<br>
+            ${q.rationale}<br><br>`;
+
+        let reviewBtn = document.createElement("button");
+        reviewBtn.innerText = "Review This Concept";
+        reviewBtn.onclick = () => {
+            alert("Tip: Reread explanation and try a similar problem.");
+        };
+        fb.appendChild(reviewBtn);
+    }
+
+    localStorage.setItem("praxisStats",
+        JSON.stringify({correct, wrong}));
+
+    document.getElementById("nextBtn").classList.remove("hidden");
+}
+
+// NEXT
+function next() {
+    current++;
+    if (current < questions.length) show();
+    else end();
+}
+
+// END
+function end() {
+    document.getElementById("quiz").classList.add("hidden");
+    document.getElementById("results").classList.remove("hidden");
+
+    document.getElementById("score").innerText =
+        `Correct: ${correct} | Incorrect: ${wrong}`;
+}
+
+</script>
+
+</body>
+</html>
