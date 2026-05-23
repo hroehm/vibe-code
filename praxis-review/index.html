@@ -17,12 +17,12 @@ body { font-family: Arial; background:#f4f7fb; text-align:center; }
 }
 
 button {
-    padding:10px;
-    margin:5px;
+    padding:12px;
+    margin:8px;
     background:#0078d4;
     color:white;
     border:none;
-    border-radius:5px;
+    border-radius:6px;
     cursor:pointer;
 }
 
@@ -31,14 +31,40 @@ button {
 
 .hidden { display:none; }
 
+/* TRUE FRACTION RENDERING */
 .fraction {
-    display:inline-block;
-    text-align:center;
-}
-.fraction .top {
-    border-bottom:1px solid black;
+    display: inline-grid;
+    grid-template-rows: auto auto;
+    justify-items: center;
+    align-items: center;
+    font-size: 22px;
+    margin: 0 6px;
 }
 
+.fraction .top {
+    border-bottom: 2px solid black;
+    padding: 2px 10px;
+}
+
+.fraction .bottom {
+    padding: 2px 10px;
+}
+
+/* Question formatting */
+#question {
+    font-size: 24px;
+    margin: 20px 0;
+}
+
+/* Answer buttons */
+#answers button {
+    display:block;
+    width:80%;
+    margin:10px auto;
+    font-size:20px;
+}
+
+/* Progress bar */
 .bar-bg {
     width:100%;
     background:#ddd;
@@ -56,6 +82,7 @@ button {
 <body>
 
 <div class="container">
+
 <h1>Praxis Review App</h1>
 
 <div class="card" id="setup">
@@ -67,29 +94,30 @@ button {
 
 <div id="categoryDiv">
 <select id="category">
-<option value="math">Math</option>
+<option value="math">Mathematics</option>
 <option value="reading">Reading</option>
 <option value="writing">Writing</option>
 </select><br><br>
 </div>
 
 <div id="testDiv" class="hidden">
-<input id="testNumber" placeholder="Test Number"><br><br>
+<input id="testNumber" placeholder="Enter Praxis Test #"><br><br>
 </div>
 
 <select id="difficulty">
 <option value="easy">Easy</option>
-<option value="medium">Medium</option>
+<option value="medium" selected>Medium</option>
 <option value="hard">Hard</option>
 </select><br><br>
 
-<input type="number" id="numQ" value="5"><br><br>
+<input type="number" id="numQ" value="5" min="1" max="20"><br><br>
 
 <button onclick="start()">Start</button>
 
 </div>
 
 <div class="card hidden" id="quiz">
+
 <h3 id="progress"></h3>
 
 <div class="bar-bg">
@@ -106,16 +134,19 @@ button {
 
 <div class="card hidden" id="results">
 <h3 id="score"></h3>
-<h3>Mastery</h3>
+
+<h3>Domain Mastery</h3>
 <div id="mastery"></div>
+
 <button onclick="location.reload()">Restart</button>
 </div>
 
 </div>
 
 <script>
+
 let questions=[], current=0, correct=0, wrong=0;
-let mastery = JSON.parse(localStorage.getItem("mastery")) || {};
+let mastery = JSON.parse(localStorage.getItem("praxis_mastery")) || {};
 
 // Toggle UI
 function toggleMode(){
@@ -124,39 +155,44 @@ function toggleMode(){
     document.getElementById("testDiv").classList.toggle("hidden", mode==="core");
 }
 
-// Fraction render
+// FRACTION
 function frac(n,d){
-    return `<span class="fraction"><span class="top">${n}</span>${d}</span>`;
+    return `
+    <span class="fraction">
+        <span class="top">${n}</span>
+        <span class="bottom">${d}</span>
+    </span>`;
 }
 
-// --- MATH ---
+// MATH QUESTION
 function mathQ(test,difficulty){
-    let a=1+Math.floor(Math.random()*5);
-    let b=2+Math.floor(Math.random()*6);
 
-    let correctAns={n:a+1,d:b};
+    let a = 1 + Math.floor(Math.random()*5);
+    let b = 2 + Math.floor(Math.random()*6);
 
-    return buildFracQ(test,"Fractions",
-        `Compute ${frac(a,b)} + ${frac(1,b)}`,
+    let questionBlock = `
+    <div>${frac(a,b)} + ${frac(1,b)}</div>
+    <div style="margin-top:10px;">Find the sum</div>
+    `;
+
+    let correctAns = {n:a+1,d:b};
+
+    return buildFracQ(test,"Fractions",questionBlock,correctAns,
+    [
         correctAns,
-        [
-            correctAns,
-            {n:a,d:b},
-            {n:a+2,d:b},
-            {n:b,d:a}
-        ],
-        "Add numerators when denominators match."
-    );
+        {n:a,d:b},
+        {n:a+2,d:b},
+        {n:b,d:a}
+    ],
+    "Add numerators when denominators are the same.");
 }
 
-// --- FRACTION BUILDER ---
+// FRACTION BUILDER
 function buildFracQ(test,domain,text,correct,options,rationale){
-    let opts = options.map(o=>{
-        return {
-            display: frac(o.n,o.d),
-            value: `${o.n}/${o.d}`
-        };
-    });
+    let opts = options.map(o=>({
+        display: frac(o.n,o.d),
+        value: `${o.n}/${o.d}`
+    }));
 
     return {
         domain,
@@ -167,39 +203,39 @@ function buildFracQ(test,domain,text,correct,options,rationale){
     };
 }
 
-// --- READING ---
+// READING
 function readingQ(test){
     return {
         domain:"Inference",
-        question:`Praxis ${test}: "Practice leads to improvement." What is implied?`,
+        question:`Praxis ${test}: "Students who practice improve." What is implied?`,
         options: shuffle([
-            {display:"Practice helps", value:"Practice helps"},
-            {display:"Practice useless", value:"Practice useless"},
-            {display:"Students lazy", value:"Students lazy"},
-            {display:"Learning stops", value:"Learning stops"}
+            {display:"Practice improves performance",value:"Practice improves performance"},
+            {display:"Practice is harmful",value:"Practice is harmful"},
+            {display:"Practice unnecessary",value:"Practice unnecessary"},
+            {display:"Students fail often",value:"Students fail often"}
         ]),
-        answer:"Practice helps",
-        rationale:"Inference = logical conclusion."
+        answer:"Practice improves performance",
+        rationale:"Inference requires drawing a logical conclusion."
     };
 }
 
-// --- WRITING ---
+// WRITING
 function writingQ(test){
     return {
         domain:"Grammar",
-        question:`Praxis ${test}: Choose correct sentence`,
+        question:`Praxis ${test}: Which sentence is correct?`,
         options: shuffle([
-            {display:"Each student has a book.", value:"Each student has a book."},
-            {display:"Each students have books.", value:"bad1"},
-            {display:"Student have books.", value:"bad2"},
-            {display:"Each student have book.", value:"bad3"}
+            {display:"Each student has a book.",value:"Each student has a book."},
+            {display:"Each students have books.",value:"bad"},
+            {display:"Each student have book.",value:"bad2"},
+            {display:"Students has books.",value:"bad3"}
         ]),
         answer:"Each student has a book.",
-        rationale:"Singular subject → singular verb."
+        rationale:"Singular subject requires singular verb."
     };
 }
 
-// Generate questions
+// GENERATE
 function generate(type,count,test,difficulty){
     let arr=[];
     for(let i=0;i<count;i++){
@@ -210,20 +246,20 @@ function generate(type,count,test,difficulty){
     return arr;
 }
 
-// Start
+// START
 function start(){
     let mode=document.getElementById("mode").value;
-    let count=parseInt(document.getElementById("numQ").value);
     let difficulty=document.getElementById("difficulty").value;
+    let count=parseInt(document.getElementById("numQ").value);
 
-    let test, type;
+    let test,type;
 
     if(mode==="core"){
         test="Core";
         type=document.getElementById("category").value;
     } else {
-        test=document.getElementById("testNumber").value;
-        if(!test){ alert("Enter test number"); return; }
+        test=document.getElementById("testNumber").value.trim();
+        if(test===""){ alert("Enter test number"); return; }
         type="math";
     }
 
@@ -237,31 +273,34 @@ function start(){
     show();
 }
 
-// Show question
+// SHOW
 function show(){
     let q=questions[current];
 
     document.getElementById("progress").innerText =
-        `Q ${current+1}/${questions.length}`;
+        `Question ${current+1}/${questions.length}`;
 
-    document.getElementById("domain").innerText="Domain: "+q.domain;
-    document.getElementById("question").innerHTML=q.question;
+    document.getElementById("domain").innerText = "Domain: "+q.domain;
+    document.getElementById("question").innerHTML = q.question;
 
     document.getElementById("bar").style.width =
-        (current/questions.length)*100+"%";
+        (current/questions.length)*100 + "%";
 
     let div=document.getElementById("answers");
     div.innerHTML="";
 
     q.options.forEach(opt=>{
         let btn=document.createElement("button");
-        btn.innerHTML=opt.display;
+        btn.innerHTML = opt.display;
         btn.onclick=()=>check(opt.value);
         div.appendChild(btn);
     });
+
+    document.getElementById("feedback").innerText="";
+    document.getElementById("nextBtn").classList.add("hidden");
 }
 
-// Check answer
+// CHECK
 function check(ans){
     let q=questions[current];
     let fb=document.getElementById("feedback");
@@ -269,7 +308,7 @@ function check(ans){
     if(ans===q.answer){
         correct++;
         fb.className="correct";
-        fb.textContent="✅ Correct";
+        fb.innerText="✅ Correct!";
         updateMastery(q.domain,true);
     } else {
         wrong++;
@@ -281,9 +320,9 @@ function check(ans){
     document.getElementById("nextBtn").classList.remove("hidden");
 }
 
-// Next
+// NEXT
 function next(){
-    document.getElementById("feedback").textContent="";
+    document.getElementById("feedback").innerText="";
     document.getElementById("nextBtn").classList.add("hidden");
 
     current++;
@@ -291,16 +330,15 @@ function next(){
     else end();
 }
 
-// Mastery tracking
+// MASTER TRACK
 function updateMastery(domain,isCorrect){
     if(!mastery[domain]) mastery[domain]={correct:0,total:0};
     mastery[domain].total++;
     if(isCorrect) mastery[domain].correct++;
-
-    localStorage.setItem("mastery", JSON.stringify(mastery));
+    localStorage.setItem("praxis_mastery", JSON.stringify(mastery));
 }
 
-// End
+// END
 function end(){
     document.getElementById("quiz").classList.add("hidden");
     document.getElementById("results").classList.remove("hidden");
@@ -311,7 +349,7 @@ function end(){
     renderMastery();
 }
 
-// Render mastery
+// RENDER MASTERY
 function renderMastery(){
     let div=document.getElementById("mastery");
     div.innerHTML="";
@@ -323,15 +361,16 @@ function renderMastery(){
         div.innerHTML+=`
         <p>${d}: ${p}%</p>
         <div class="bar-bg">
-        <div class="bar-fill" style="width:${p}%"></div>
+            <div class="bar-fill" style="width:${p}%"></div>
         </div>`;
     }
 }
 
-// Shuffle
+// SHUFFLE
 function shuffle(arr){
     return arr.sort(()=>Math.random()-0.5);
 }
+
 </script>
 
 </body>
