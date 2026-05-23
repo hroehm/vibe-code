@@ -59,17 +59,17 @@ button:hover { background:#005a9e; }
 <h3>Start Practice</h3>
 
 <label>Test Type:</label><br>
-<select id="mode" onchange="toggleTestInput()">
+<select id="mode" onchange="toggleMode()">
 <option value="core">Core Praxis</option>
 <option value="specific">Specific Test</option>
 </select><br><br>
 
 <div id="testNumberDiv" class="hidden">
 <label>Enter Praxis Test Number:</label><br>
-<input type="text" id="testNumber" placeholder="e.g., 5165"><br><br>
+<input type="text" id="testNumber"><br><br>
 </div>
 
-<label>Category:</label><br>
+<label>Category (Core Only):</label><br>
 <select id="category">
 <option value="math">Mathematics</option>
 <option value="reading">Reading</option>
@@ -110,152 +110,130 @@ button:hover { background:#005a9e; }
 <script>
 let questions=[], current=0, correct=0, wrong=0;
 
-function toggleTestInput() {
-    let mode = document.getElementById("mode").value;
-    document.getElementById("testNumberDiv")
-        .classList.toggle("hidden", mode === "core");
+// Toggle mode UI
+function toggleMode(){
+    let mode=document.getElementById("mode").value;
+    let testDiv=document.getElementById("testNumberDiv");
+    let cat=document.getElementById("category");
+
+    if(mode==="specific"){
+        testDiv.classList.remove("hidden");
+        cat.disabled=true;
+    } else {
+        testDiv.classList.add("hidden");
+        cat.disabled=false;
+    }
 }
 
-// FRACTION DISPLAY
-function frac(n,d) {
+// Fraction display
+function fracHTML(n,d){
     return `<span class="fraction">
         <span class="top">${n}</span>
         <span>${d}</span>
     </span>`;
 }
 
-// MATH QUESTIONS
-function mathQ(test, difficulty) {
+// Math Question Generator
+function mathQ(test, difficulty){
 
-    if (difficulty === "easy") {
-        let n = 1 + Math.floor(Math.random()*4);
-        let d = 2 + Math.floor(Math.random()*5);
-        let answer = `${n}/${d}`;
+    if(difficulty==="easy"){
+        let n=1+Math.floor(Math.random()*4);
+        let d=2+Math.floor(Math.random()*6);
+        let correctAns={n,d};
 
-        return {
-            domain: "Fractions",
-            question: `Praxis ${test}: Which represents the fraction ${frac(n,d)}?`,
-            options: shuffle([
-                answer, `${n+1}/${d}`, `${n}/${d+1}`, `${d}/${n}`
-            ]),
-            answer: answer,
-            rationale: "Match numerator and denominator correctly."
-        };
+        let options=[
+            correctAns,
+            {n:n+1,d},
+            {n,d:d+1},
+            {n:d,d:n}
+        ];
+
+        return buildFractionQuestion(test,"Fractions",
+            `Which represents this fraction? ${fracHTML(n,d)}`,
+            correctAns, options,
+            "Match numerator (top) and denominator (bottom)."
+        );
     }
 
-    if (difficulty === "medium") {
+    if(difficulty==="medium"){
         let a=1+Math.floor(Math.random()*4);
-        let b=2+Math.floor(Math.random()*4);
-        let c=1+Math.floor(Math.random()*4);
-        let d=2+Math.floor(Math.random()*4);
-
-        let num=a*d+b*c;
-        let den=b*d;
-
-        return {
-            domain:"Fraction Addition",
-            question:`Praxis ${test}: Compute ${frac(a,b)} + ${frac(c,d)}`,
-            options: shuffle([
-                `${num}/${den}`,
-                `${a+c}/${b+d}`,
-                `${num+1}/${den}`,
-                `${num}/${den+1}`
-            ]),
-            answer:`${num}/${den}`,
-            rationale:"Find common denominator, then add numerators."
-        };
-    }
-
-    if (difficulty === "hard") {
-        let a=2+Math.floor(Math.random()*5);
         let b=2+Math.floor(Math.random()*5);
+        let c=1+Math.floor(Math.random()*4);
+        let d=2+Math.floor(Math.random()*5);
 
-        let num=a*a - b*b;
+        let correctAns={n:a*d+b*c, d:b*d};
 
-        return {
-            domain:"Algebra",
-            question:`Praxis ${test}: Simplify x² - ${b*b} when x=${a}`,
-            options: shuffle([
-                num.toString(),
-                (a*a+b*b).toString(),
-                (a-b).toString(),
-                (a+b).toString()
-            ]),
-            answer:num.toString(),
-            rationale:"Substitute and compute squares."
-        };
+        let options=[
+            correctAns,
+            {n:a+c,d:b+d},
+            {n:correctAns.n+1,d:correctAns.d},
+            {n:correctAns.n,d:correctAns.d+1}
+        ];
+
+        return buildFractionQuestion(test,"Fraction Addition",
+            `Compute ${fracHTML(a,b)} + ${fracHTML(c,d)}`,
+            correctAns, options,
+            "Find common denominator, then add numerators."
+        );
     }
 }
 
-// READING
-function readingQ(test, difficulty) {
-    if (difficulty==="hard") {
-        return {
-            domain:"Inference",
-            question:`Praxis ${test}: "Students who revise their work show significant improvement." What is implied?`,
-            options: shuffle([
-                "Revision supports improvement",
-                "Students dislike editing",
-                "Writing is easy",
-                "Improvement is automatic"
-            ]),
-            answer:"Revision supports improvement",
-            rationale:"Inference requires logical interpretation beyond text."
-        };
-    }
+// Build fraction MC
+function buildFractionQuestion(test, domain, text, correct, options, rationale){
+
+    let formattedOptions = shuffle(options.map(o => ({
+        display: fracHTML(o.n, o.d),
+        value: `${o.n}/${o.d}`
+    })));
 
     return {
+        domain,
+        question:`Praxis ${test}: ${text}`,
+        options: formattedOptions,
+        answer:`${correct.n}/${correct.d}`,
+        rationale
+    };
+}
+
+// Reading/Writing simplified
+function readingQ(test){
+    return {
         domain:"Main Idea",
-        question:`Praxis ${test}: What is the main idea of: "Practice improves performance."`,
+        question:`Praxis ${test}: What is the main idea of "Practice improves performance"?`,
         options: shuffle([
-            "Practice improves performance",
-            "Students dislike practice",
-            "Performance is random",
-            "Practice wastes time"
+            {display:"Practice improves performance",value:"Practice improves performance"},
+            {display:"Practice wastes time",value:"Practice wastes time"},
+            {display:"Learning is hard",value:"Learning is hard"},
+            {display:"Performance is random",value:"Performance is random"}
         ]),
         answer:"Practice improves performance",
         rationale:"Main idea = central concept."
     };
 }
 
-// WRITING
-function writingQ(test, difficulty) {
-    if (difficulty==="hard") {
-        return {
-            domain:"Sentence Structure",
-            question:`Praxis ${test}: Identify the correctly structured complex sentence.`,
-            options: shuffle([
-                "Although she studied, she struggled on the test.",
-                "Although she studied.",
-                "She studied although.",
-                "Studied she although."
-            ]),
-            answer:"Although she studied, she struggled on the test.",
-            rationale:"A complex sentence must have dependent + independent clause."
-        };
-    }
-
+function writingQ(test){
     return {
         domain:"Grammar",
         question:`Praxis ${test}: Which sentence is correct?`,
         options: shuffle([
-            "Each student must bring his or her book.",
-            "Each student must bring their book.",
-            "Each student bring book.",
-            "Each student brings books."
+            {display:"Each student must bring his or her book.",value:"Each student must bring his or her book."},
+            {display:"Each student must bring their book.",value:"Each student must bring their book."},
+            {display:"Each student bring book.",value:"Each student bring book."},
+            {display:"Each student brings books.",value:"Each student brings books."}
         ]),
         answer:"Each student must bring his or her book.",
         rationale:"Singular subject → singular pronoun."
     };
 }
 
-// GENERATE
+// Generate
 function generate(type,count,test,difficulty){
     let arr=[];
+
     for(let i=0;i<count;i++){
         if(type==="math") arr.push(mathQ(test,difficulty));
-        if(type==="reading") arr.push(readingQ(test,difficulty));
-        if(type==="writing") arr.push(writingQ(test,difficulty));
+        else if(type==="reading") arr.push(readingQ(test));
+        else arr.push(writingQ(test));
     }
     return arr;
 }
@@ -267,6 +245,8 @@ function start(){
         document.getElementById("testNumber").value || "Specific";
 
     let type=document.getElementById("category").value;
+    if(mode==="specific") type="math"; // default for specific (can expand later)
+
     let difficulty=document.getElementById("difficulty").value;
     let count=parseInt(document.getElementById("numQ").value);
 
@@ -293,8 +273,8 @@ function show(){
 
     q.options.forEach(opt=>{
         let btn=document.createElement("button");
-        btn.innerHTML=opt;
-        btn.onclick=()=>check(opt);
+        btn.innerHTML=opt.display;
+        btn.onclick=()=>check(opt.value);
         div.appendChild(btn);
     });
 
