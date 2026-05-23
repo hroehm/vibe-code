@@ -6,13 +6,45 @@
 
 <style>
 body { font-family: Arial; background:#f4f7fb; text-align:center; }
-.container { max-width:800px; margin:auto; padding:20px; }
-.card { background:white; padding:20px; margin:15px 0; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);}
-button { padding:10px; margin:5px; background:#0078d4; color:white; border:none; border-radius:5px; cursor:pointer;}
+.container { max-width:900px; margin:auto; padding:20px; }
+
+.card {
+    background:white;
+    padding:20px;
+    margin:15px 0;
+    border-radius:10px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+button {
+    padding:10px;
+    margin:5px;
+    background:#0078d4;
+    color:white;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+}
 button:hover { background:#005a9e; }
+
 .correct { color:green; font-weight:bold; }
 .incorrect { color:red; font-weight:bold; }
+
 .hidden { display:none; }
+
+/* Fraction styling */
+.fraction {
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+}
+.fraction span {
+    display: block;
+    padding:2px;
+}
+.fraction .top {
+    border-bottom:1px solid black;
+}
 </style>
 </head>
 
@@ -23,10 +55,19 @@ button:hover { background:#005a9e; }
 <h1>Praxis Review App</h1>
 
 <div class="card" id="setup">
+
 <h3>Start Practice</h3>
 
-<label>Praxis Test Number:</label><br>
-<input type="text" id="testNumber" placeholder="e.g., 5733"><br><br>
+<label>Test Type:</label><br>
+<select id="mode" onchange="toggleTestInput()">
+<option value="core">Core Praxis</option>
+<option value="specific">Specific Test</option>
+</select><br><br>
+
+<div id="testNumberDiv" class="hidden">
+<label>Enter Praxis Test Number:</label><br>
+<input type="text" id="testNumber" placeholder="e.g., 5165"><br><br>
+</div>
 
 <label>Category:</label><br>
 <select id="category">
@@ -35,14 +76,23 @@ button:hover { background:#005a9e; }
 <option value="writing">Writing</option>
 </select><br><br>
 
+<label>Difficulty:</label><br>
+<select id="difficulty">
+<option value="easy">Easy</option>
+<option value="medium" selected>Medium</option>
+<option value="hard">Hard</option>
+</select><br><br>
+
 <label>Number of Questions:</label><br>
 <input type="number" id="numQ" value="5" min="1" max="20"><br><br>
 
 <button onclick="start()">Start</button>
+
 </div>
 
 <div class="card hidden" id="quiz">
 <h3 id="progress"></h3>
+<p id="domain"></p>
 <p id="question"></p>
 <div id="answers"></div>
 <p id="feedback"></p>
@@ -58,94 +108,169 @@ button:hover { background:#005a9e; }
 </div>
 
 <script>
-let questions = [];
-let current = 0;
-let correct = 0;
-let wrong = 0;
+let questions=[], current=0, correct=0, wrong=0;
 
-// GENERATORS
-function generateMathQ(testNum) {
-    let a = Math.floor(Math.random()*20);
-    let b = Math.floor(Math.random()*20);
-    let answer = String(a + b);
-
-    return {
-        question: `Praxis ${testNum}: What is ${a} + ${b}?`,
-        options: shuffle([
-            answer,
-            String(a+b+1),
-            String(a+b-1),
-            String(a+b+2)
-        ]),
-        answer: answer,
-        rationale: `Add ${a} and ${b}. ${a} + ${b} = ${answer}.`
-    };
+function toggleTestInput() {
+    let mode = document.getElementById("mode").value;
+    document.getElementById("testNumberDiv")
+        .classList.toggle("hidden", mode === "core");
 }
 
-function generateReadingQ(testNum) {
-    const passages = [
-        {
-            text: "Effective teachers adjust instruction to meet student needs.",
-            answer: "Teachers should adapt instruction"
-        },
-        {
-            text: "Practicing reading improves comprehension skills.",
-            answer: "Practice improves comprehension"
-        }
-    ];
-
-    let p = passages[Math.floor(Math.random()*passages.length)];
-
-    return {
-        question: `Praxis ${testNum}: ${p.text} What is the main idea?`,
-        options: shuffle([
-            p.answer,
-            "Teaching is difficult",
-            "Reading is optional",
-            "Students dislike learning"
-        ]),
-        answer: p.answer,
-        rationale: "The main idea is the central message of the sentence."
-    };
+// FRACTION DISPLAY
+function frac(n,d) {
+    return `<span class="fraction">
+        <span class="top">${n}</span>
+        <span>${d}</span>
+    </span>`;
 }
 
-function generateWritingQ(testNum) {
-    return {
-        question: `Praxis ${testNum}: Which sentence is grammatically correct?`,
-        options: shuffle([
-            "She doesn't like apples.",
-            "She don't like apples.",
-            "She not like apples.",
-            "She doesn't likes apples."
-        ]),
-        answer: "She doesn't like apples.",
-        rationale: "Use 'doesn't' with the base form of the verb."
-    };
-}
+// MATH QUESTIONS
+function mathQ(test, difficulty) {
 
-// GENERATE SET
-function generateQuestions(type, count, testNum) {
-    let qs = [];
-    for (let i = 0; i < count; i++) {
-        if (type === "math") qs.push(generateMathQ(testNum));
-        if (type === "reading") qs.push(generateReadingQ(testNum));
-        if (type === "writing") qs.push(generateWritingQ(testNum));
+    if (difficulty === "easy") {
+        let n = 1 + Math.floor(Math.random()*4);
+        let d = 2 + Math.floor(Math.random()*5);
+        let answer = `${n}/${d}`;
+
+        return {
+            domain: "Fractions",
+            question: `Praxis ${test}: Which represents the fraction ${frac(n,d)}?`,
+            options: shuffle([
+                answer, `${n+1}/${d}`, `${n}/${d+1}`, `${d}/${n}`
+            ]),
+            answer: answer,
+            rationale: "Match numerator and denominator correctly."
+        };
     }
-    return qs;
+
+    if (difficulty === "medium") {
+        let a=1+Math.floor(Math.random()*4);
+        let b=2+Math.floor(Math.random()*4);
+        let c=1+Math.floor(Math.random()*4);
+        let d=2+Math.floor(Math.random()*4);
+
+        let num=a*d+b*c;
+        let den=b*d;
+
+        return {
+            domain:"Fraction Addition",
+            question:`Praxis ${test}: Compute ${frac(a,b)} + ${frac(c,d)}`,
+            options: shuffle([
+                `${num}/${den}`,
+                `${a+c}/${b+d}`,
+                `${num+1}/${den}`,
+                `${num}/${den+1}`
+            ]),
+            answer:`${num}/${den}`,
+            rationale:"Find common denominator, then add numerators."
+        };
+    }
+
+    if (difficulty === "hard") {
+        let a=2+Math.floor(Math.random()*5);
+        let b=2+Math.floor(Math.random()*5);
+
+        let num=a*a - b*b;
+
+        return {
+            domain:"Algebra",
+            question:`Praxis ${test}: Simplify x² - ${b*b} when x=${a}`,
+            options: shuffle([
+                num.toString(),
+                (a*a+b*b).toString(),
+                (a-b).toString(),
+                (a+b).toString()
+            ]),
+            answer:num.toString(),
+            rationale:"Substitute and compute squares."
+        };
+    }
 }
 
-// SHUFFLE
-function shuffle(arr) {
-    return arr.sort(() => Math.random() - 0.5);
+// READING
+function readingQ(test, difficulty) {
+    if (difficulty==="hard") {
+        return {
+            domain:"Inference",
+            question:`Praxis ${test}: "Students who revise their work show significant improvement." What is implied?`,
+            options: shuffle([
+                "Revision supports improvement",
+                "Students dislike editing",
+                "Writing is easy",
+                "Improvement is automatic"
+            ]),
+            answer:"Revision supports improvement",
+            rationale:"Inference requires logical interpretation beyond text."
+        };
+    }
+
+    return {
+        domain:"Main Idea",
+        question:`Praxis ${test}: What is the main idea of: "Practice improves performance."`,
+        options: shuffle([
+            "Practice improves performance",
+            "Students dislike practice",
+            "Performance is random",
+            "Practice wastes time"
+        ]),
+        answer:"Practice improves performance",
+        rationale:"Main idea = central concept."
+    };
+}
+
+// WRITING
+function writingQ(test, difficulty) {
+    if (difficulty==="hard") {
+        return {
+            domain:"Sentence Structure",
+            question:`Praxis ${test}: Identify the correctly structured complex sentence.`,
+            options: shuffle([
+                "Although she studied, she struggled on the test.",
+                "Although she studied.",
+                "She studied although.",
+                "Studied she although."
+            ]),
+            answer:"Although she studied, she struggled on the test.",
+            rationale:"A complex sentence must have dependent + independent clause."
+        };
+    }
+
+    return {
+        domain:"Grammar",
+        question:`Praxis ${test}: Which sentence is correct?`,
+        options: shuffle([
+            "Each student must bring his or her book.",
+            "Each student must bring their book.",
+            "Each student bring book.",
+            "Each student brings books."
+        ]),
+        answer:"Each student must bring his or her book.",
+        rationale:"Singular subject → singular pronoun."
+    };
+}
+
+// GENERATE
+function generate(type,count,test,difficulty){
+    let arr=[];
+    for(let i=0;i<count;i++){
+        if(type==="math") arr.push(mathQ(test,difficulty));
+        if(type==="reading") arr.push(readingQ(test,difficulty));
+        if(type==="writing") arr.push(writingQ(test,difficulty));
+    }
+    return arr;
 }
 
 // START
-function start() {
-    const type = document.getElementById("category").value;
-    const num = parseInt(document.getElementById("numQ").value);
-    const testNum = document.getElementById("testNumber").value || "General";
+function start(){
+    let mode=document.getElementById("mode").value;
+    let test = mode==="core" ? "Core" :
+        document.getElementById("testNumber").value || "Specific";
 
-    questions = generateQuestions(type, num, testNum);
+    let type=document.getElementById("category").value;
+    let difficulty=document.getElementById("difficulty").value;
+    let count=parseInt(document.getElementById("numQ").value);
+
+    questions=generate(type,count,test,difficulty);
 
     document.getElementById("setup").classList.add("hidden");
     document.getElementById("quiz").classList.remove("hidden");
@@ -154,75 +279,68 @@ function start() {
 }
 
 // SHOW
-function show() {
-    let q = questions[current];
+function show(){
+    let q=questions[current];
 
-    document.getElementById("progress").innerText =
+    document.getElementById("progress").innerText=
         `Question ${current+1}/${questions.length}`;
 
-    document.getElementById("question").innerText = q.question;
+    document.getElementById("domain").innerText=`Domain: ${q.domain}`;
+    document.getElementById("question").innerHTML=q.question;
 
-    let div = document.getElementById("answers");
-    div.innerHTML = "";
+    let div=document.getElementById("answers");
+    div.innerHTML="";
 
-    q.options.forEach(opt => {
-        let btn = document.createElement("button");
-        btn.innerText = opt;
-        btn.onclick = () => check(String(opt));
+    q.options.forEach(opt=>{
+        let btn=document.createElement("button");
+        btn.innerHTML=opt;
+        btn.onclick=()=>check(opt);
         div.appendChild(btn);
     });
 
-    document.getElementById("feedback").innerText = "";
+    document.getElementById("feedback").innerText="";
     document.getElementById("nextBtn").classList.add("hidden");
 }
 
 // CHECK
-function check(ans) {
-    let q = questions[current];
-    let fb = document.getElementById("feedback");
+function check(ans){
+    let q=questions[current];
+    let fb=document.getElementById("feedback");
 
-    if (String(ans) === String(q.answer)) {
+    if(ans===q.answer){
         correct++;
-        fb.className = "correct";
-        fb.innerText = "✅ Correct!";
+        fb.className="correct";
+        fb.innerText="✅ Correct!";
     } else {
         wrong++;
-        fb.className = "incorrect";
-        fb.innerHTML = `❌ Incorrect<br>
-        Correct Answer: ${q.answer}<br>
-        ${q.rationale}<br><br>`;
-
-        let review = document.createElement("button");
-        review.innerText = "Review Concept";
-        review.onclick = () => alert("Review tip: Revisit the explanation and try another similar question.");
-        fb.appendChild(review);
+        fb.className="incorrect";
+        fb.innerHTML=`❌ Incorrect<br>Answer: ${q.answer}<br>${q.rationale}`;
     }
 
-    localStorage.setItem("praxisStats", JSON.stringify({correct, wrong}));
     document.getElementById("nextBtn").classList.remove("hidden");
 }
 
 // NEXT
-function next() {
+function next(){
     current++;
-    if (current < questions.length) {
-        show();
-    } else {
-        end();
-    }
+    if(current<questions.length) show();
+    else end();
 }
 
 // END
-function end() {
+function end(){
     document.getElementById("quiz").classList.add("hidden");
     document.getElementById("results").classList.remove("hidden");
 
-    document.getElementById("score").innerText =
+    document.getElementById("score").innerText=
         `Correct: ${correct} | Incorrect: ${wrong}`;
 }
 
+// SHUFFLE
+function shuffle(arr){
+    return arr.sort(()=>Math.random()-0.5);
+}
 </script>
 
 </body>
 </html>
-``
