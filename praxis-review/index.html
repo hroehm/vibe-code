@@ -26,56 +26,82 @@ button {
     cursor:pointer;
 }
 
-.correct { color:green; }
-.incorrect { color:red; }
-
-.hidden { display:none; }
-
-/* TRUE FRACTION RENDERING */
+/* FRACTIONS (Improved Alignment) */
 .fraction {
-    display: inline-grid;
-    grid-template-rows: auto auto;
-    justify-items: center;
-    align-items: center;
-    font-size: 22px;
-    margin: 0 6px;
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    margin:0 8px;
 }
 
 .fraction .top {
-    border-bottom: 2px solid black;
-    padding: 2px 10px;
+    border-bottom:2px solid black;
+    min-width:35px;
+    text-align:center;
+    font-size:22px;
 }
 
 .fraction .bottom {
-    padding: 2px 10px;
+    min-width:35px;
+    text-align:center;
+    font-size:22px;
 }
 
-/* Question formatting */
-#question {
-    font-size: 24px;
-    margin: 20px 0;
+/* RADICAL */
+.radical {
+    display:inline-flex;
+    align-items:center;
+    font-size:24px;
+}
+.radical .symbol {
+    font-size:28px;
+    margin-right:4px;
+}
+.radical .radicand {
+    border-top:2px solid black;
+    padding:3px 6px;
+}
+
+/* EXPONENT */
+.exponent {
+    position:relative;
+    display:inline-block;
+}
+.exponent sup {
+    position:absolute;
+    top:-10px;
+    right:-10px;
+    font-size:16px;
+}
+
+/* Math layout */
+.math {
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:15px;
+    font-size:26px;
+    margin:20px 0;
 }
 
 /* Answer buttons */
 #answers button {
-    display:block;
-    width:80%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    width:240px;
+    height:70px;
     margin:10px auto;
-    font-size:20px;
 }
 
 /* Progress bar */
-.bar-bg {
-    width:100%;
-    background:#ddd;
-    border-radius:8px;
-}
-.bar-fill {
-    height:15px;
-    background:#0078d4;
-    border-radius:8px;
-    width:0%;
-}
+.bar-bg { width:100%; background:#ddd; border-radius:8px; }
+.bar-fill { height:15px; background:#0078d4; border-radius:8px; width:0%; }
+
+.correct { color:green; }
+.incorrect { color:red; }
+.hidden { display:none; }
 </style>
 </head>
 
@@ -110,7 +136,7 @@ button {
 <option value="hard">Hard</option>
 </select><br><br>
 
-<input type="number" id="numQ" value="5" min="1" max="20"><br><br>
+<input type="number" id="numQ" value="5"><br><br>
 
 <button onclick="start()">Start</button>
 
@@ -125,11 +151,12 @@ button {
 </div>
 
 <p id="domain"></p>
-<p id="question"></p>
+<div id="question"></div>
 <div id="answers"></div>
 <p id="feedback"></p>
 
 <button id="nextBtn" class="hidden" onclick="next()">Next</button>
+
 </div>
 
 <div class="card hidden" id="results">
@@ -148,7 +175,7 @@ button {
 let questions=[], current=0, correct=0, wrong=0;
 let mastery = JSON.parse(localStorage.getItem("praxis_mastery")) || {};
 
-// Toggle UI
+// UI toggle
 function toggleMode(){
     let mode=document.getElementById("mode").value;
     document.getElementById("categoryDiv").classList.toggle("hidden", mode==="specific");
@@ -157,82 +184,99 @@ function toggleMode(){
 
 // FRACTION
 function frac(n,d){
-    return `
-    <span class="fraction">
+    return `<span class="fraction">
         <span class="top">${n}</span>
         <span class="bottom">${d}</span>
     </span>`;
 }
 
-// MATH QUESTION
-function mathQ(test,difficulty){
-
-    let a = 1 + Math.floor(Math.random()*5);
-    let b = 2 + Math.floor(Math.random()*6);
-
-    let questionBlock = `
-    <div>${frac(a,b)} + ${frac(1,b)}</div>
-    <div style="margin-top:10px;">Find the sum</div>
-    `;
-
-    let correctAns = {n:a+1,d:b};
-
-    return buildFracQ(test,"Fractions",questionBlock,correctAns,
-    [
-        correctAns,
-        {n:a,d:b},
-        {n:a+2,d:b},
-        {n:b,d:a}
-    ],
-    "Add numerators when denominators are the same.");
+// RADICAL
+function radical(n){
+    return `<span class="radical">
+        <span class="symbol">√</span>
+        <span class="radicand">${n}</span>
+    </span>`;
 }
 
-// FRACTION BUILDER
-function buildFracQ(test,domain,text,correct,options,rationale){
-    let opts = options.map(o=>({
-        display: frac(o.n,o.d),
-        value: `${o.n}/${o.d}`
-    }));
+// EXPONENT
+function exp(base,power){
+    return `<span>${base}<sup>${power}</sup></span>`;
+}
 
+// MATH QUESTION TYPES
+function mathQ(test,difficulty){
+
+    if(difficulty==="easy"){
+        let a=1+Math.random()*4|0;
+        let b=2+Math.random()*6|0;
+
+        return buildQ(test,"Fractions",
+            `<div class="math">${frac(a,b)} + ${frac(1,b)}</div>`,
+            `${a+1}/${b}`,
+            [frac(a+1,b), frac(a,b), frac(a+2,b), frac(b,a)],
+            "Add numerators with same denominator.");
+    }
+
+    if(difficulty==="medium"){
+        let n=4+Math.random()*10|0;
+
+        return buildQ(test,"Radicals",
+            `<div class="math">${radical(n*n)}</div>`,
+            `${n}`,
+            [`${n}`, `${n+1}`, `${n-1}`, `${n+2}`],
+            "Square root of n² is n.");
+    }
+
+    if(difficulty==="hard"){
+        let base=2+Math.random()*5|0;
+
+        return buildQ(test,"Exponents",
+            `<div class="math">${exp(base,2)}</div>`,
+            `${base*base}`,
+            [`${base*base}`, `${base+base}`, `${base*3}`, `${base}`],
+            "Exponent means repeated multiplication.");
+    }
+}
+
+// BUILD QUESTION
+function buildQ(test,domain,text,answer,options,rationale){
     return {
         domain,
         question:`Praxis ${test}: ${text}`,
-        options: shuffle(opts),
-        answer:`${correct.n}/${correct.d}`,
+        options: shuffle(options.map(o=>({display:o,value:o}))),
+        answer:answer,
         rationale
     };
 }
 
 // READING
 function readingQ(test){
-    return {
-        domain:"Inference",
-        question:`Praxis ${test}: "Students who practice improve." What is implied?`,
-        options: shuffle([
-            {display:"Practice improves performance",value:"Practice improves performance"},
-            {display:"Practice is harmful",value:"Practice is harmful"},
-            {display:"Practice unnecessary",value:"Practice unnecessary"},
-            {display:"Students fail often",value:"Students fail often"}
-        ]),
-        answer:"Practice improves performance",
-        rationale:"Inference requires drawing a logical conclusion."
-    };
+    return buildQ(test,"Inference",
+        `"Practice improves performance." What is implied?`,
+        "Practice improves performance",
+        [
+            "Practice improves performance",
+            "Practice is useless",
+            "Students fail",
+            "Learning ends"
+        ],
+        "Inference = logical conclusion."
+    );
 }
 
 // WRITING
 function writingQ(test){
-    return {
-        domain:"Grammar",
-        question:`Praxis ${test}: Which sentence is correct?`,
-        options: shuffle([
-            {display:"Each student has a book.",value:"Each student has a book."},
-            {display:"Each students have books.",value:"bad"},
-            {display:"Each student have book.",value:"bad2"},
-            {display:"Students has books.",value:"bad3"}
-        ]),
-        answer:"Each student has a book.",
-        rationale:"Singular subject requires singular verb."
-    };
+    return buildQ(test,"Grammar",
+        "Which sentence is correct?",
+        "Each student has a book.",
+        [
+            "Each student has a book.",
+            "Each students have books.",
+            "Student have book.",
+            "Students has books."
+        ],
+        "Singular subject → singular verb."
+    );
 }
 
 // GENERATE
@@ -259,12 +303,11 @@ function start(){
         type=document.getElementById("category").value;
     } else {
         test=document.getElementById("testNumber").value.trim();
-        if(test===""){ alert("Enter test number"); return; }
+        if(!test){ alert("Enter test number"); return; }
         type="math";
     }
 
     current=0; correct=0; wrong=0;
-
     questions=generate(type,count,test,difficulty);
 
     document.getElementById("setup").classList.add("hidden");
@@ -279,19 +322,18 @@ function show(){
 
     document.getElementById("progress").innerText =
         `Question ${current+1}/${questions.length}`;
-
-    document.getElementById("domain").innerText = "Domain: "+q.domain;
-    document.getElementById("question").innerHTML = q.question;
+    document.getElementById("domain").innerText="Domain: "+q.domain;
+    document.getElementById("question").innerHTML=q.question;
 
     document.getElementById("bar").style.width =
-        (current/questions.length)*100 + "%";
+        (current/questions.length)*100+"%";
 
     let div=document.getElementById("answers");
     div.innerHTML="";
 
     q.options.forEach(opt=>{
         let btn=document.createElement("button");
-        btn.innerHTML = opt.display;
+        btn.innerHTML=opt.display;
         btn.onclick=()=>check(opt.value);
         div.appendChild(btn);
     });
@@ -349,7 +391,7 @@ function end(){
     renderMastery();
 }
 
-// RENDER MASTERY
+// RENDER
 function renderMastery(){
     let div=document.getElementById("mastery");
     div.innerHTML="";
@@ -361,16 +403,14 @@ function renderMastery(){
         div.innerHTML+=`
         <p>${d}: ${p}%</p>
         <div class="bar-bg">
-            <div class="bar-fill" style="width:${p}%"></div>
+        <div class="bar-fill" style="width:${p}%"></div>
         </div>`;
     }
 }
 
-// SHUFFLE
 function shuffle(arr){
     return arr.sort(()=>Math.random()-0.5);
 }
-
 </script>
 
 </body>
