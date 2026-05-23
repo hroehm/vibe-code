@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <title>Praxis Review App</title>
 
+<!-- ✅ MathJax -->
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
 <style>
 body { font-family: Arial; background:#f4f7fb; text-align:center; }
 .container { max-width:900px; margin:auto; padding:20px; }
@@ -26,76 +34,13 @@ button {
     cursor:pointer;
 }
 
-/* FRACTIONS (Improved Alignment) */
-.fraction {
-    display:inline-flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    margin:0 8px;
-}
-
-.fraction .top {
-    border-bottom:2px solid black;
-    min-width:35px;
-    text-align:center;
-    font-size:22px;
-}
-
-.fraction .bottom {
-    min-width:35px;
-    text-align:center;
-    font-size:22px;
-}
-
-/* RADICAL */
-.radical {
-    display:inline-flex;
-    align-items:center;
-    font-size:24px;
-}
-.radical .symbol {
-    font-size:28px;
-    margin-right:4px;
-}
-.radical .radicand {
-    border-top:2px solid black;
-    padding:3px 6px;
-}
-
-/* EXPONENT */
-.exponent {
-    position:relative;
-    display:inline-block;
-}
-.exponent sup {
-    position:absolute;
-    top:-10px;
-    right:-10px;
-    font-size:16px;
-}
-
-/* Math layout */
-.math {
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap:15px;
-    font-size:26px;
-    margin:20px 0;
-}
-
-/* Answer buttons */
 #answers button {
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    width:240px;
-    height:70px;
+    display:block;
+    width:80%;
     margin:10px auto;
+    font-size:20px;
 }
 
-/* Progress bar */
 .bar-bg { width:100%; background:#ddd; border-radius:8px; }
 .bar-fill { height:15px; background:#0078d4; border-radius:8px; width:0%; }
 
@@ -146,9 +91,7 @@ button {
 
 <h3 id="progress"></h3>
 
-<div class="bar-bg">
-<div id="bar" class="bar-fill"></div>
-</div>
+<div class="bar-bg"><div id="bar" class="bar-fill"></div></div>
 
 <p id="domain"></p>
 <div id="question"></div>
@@ -175,111 +118,95 @@ button {
 let questions=[], current=0, correct=0, wrong=0;
 let mastery = JSON.parse(localStorage.getItem("praxis_mastery")) || {};
 
-// UI toggle
 function toggleMode(){
     let mode=document.getElementById("mode").value;
     document.getElementById("categoryDiv").classList.toggle("hidden", mode==="specific");
     document.getElementById("testDiv").classList.toggle("hidden", mode==="core");
 }
 
-// FRACTION
-function frac(n,d){
-    return `<span class="fraction">
-        <span class="top">${n}</span>
-        <span class="bottom">${d}</span>
-    </span>`;
-}
+// ✅ Math Builders (MathJax syntax)
+function frac(a,b){ return `\\(\\frac{${a}}{${b}}\\)`; }
+function radical(n){ return `\\(\\sqrt{${n}}\\)`; }
+function exp(b,e){ return `\\(${b}^{${e}}\\)`; }
 
-// RADICAL
-function radical(n){
-    return `<span class="radical">
-        <span class="symbol">√</span>
-        <span class="radicand">${n}</span>
-    </span>`;
-}
-
-// EXPONENT
-function exp(base,power){
-    return `<span>${base}<sup>${power}</sup></span>`;
-}
-
-// MATH QUESTION TYPES
+// ✅ Praxis-aware Math Generator
 function mathQ(test,difficulty){
 
     if(difficulty==="easy"){
         let a=1+Math.random()*4|0;
-        let b=2+Math.random()*6|0;
+        let b=2+Math.random()*5|0;
 
         return buildQ(test,"Fractions",
-            `<div class="math">${frac(a,b)} + ${frac(1,b)}</div>`,
-            `${a+1}/${b}`,
+            `${frac(a,b)} + ${frac(1,b)}`,
+            frac(a+1,b),
             [frac(a+1,b), frac(a,b), frac(a+2,b), frac(b,a)],
-            "Add numerators with same denominator.");
+            "Add numerators when denominators are equal."
+        );
     }
 
     if(difficulty==="medium"){
         let n=4+Math.random()*10|0;
 
         return buildQ(test,"Radicals",
-            `<div class="math">${radical(n*n)}</div>`,
-            `${n}`,
-            [`${n}`, `${n+1}`, `${n-1}`, `${n+2}`],
-            "Square root of n² is n.");
+            `${radical(n*n)}`,
+            `\\(${n}\\)`,
+            [`\\(${n}\\)`, `\\(${n+1}\\)`, `\\(${n-1}\\)`, `\\(${n+2}\\)`],
+            "Square root of a perfect square equals its root."
+        );
     }
 
     if(difficulty==="hard"){
-        let base=2+Math.random()*5|0;
+        let b=2+Math.random()*5|0;
 
         return buildQ(test,"Exponents",
-            `<div class="math">${exp(base,2)}</div>`,
-            `${base*base}`,
-            [`${base*base}`, `${base+base}`, `${base*3}`, `${base}`],
-            "Exponent means repeated multiplication.");
+            `${exp(b,2)}`,
+            `\\(${b*b}\\)`,
+            [`\\(${b*b}\\)`, `\\(${b+b}\\)`, `\\(${b*3}\\)`, `\\(${b}\\)`],
+            "Exponent represents repeated multiplication."
+        );
     }
 }
 
-// BUILD QUESTION
-function buildQ(test,domain,text,answer,options,rationale){
-    return {
-        domain,
-        question:`Praxis ${test}: ${text}`,
-        options: shuffle(options.map(o=>({display:o,value:o}))),
-        answer:answer,
-        rationale
-    };
-}
-
-// READING
+// Reading
 function readingQ(test){
     return buildQ(test,"Inference",
-        `"Practice improves performance." What is implied?`,
-        "Practice improves performance",
+        "A teacher who differentiates instruction improves outcomes. What is implied?",
+        "Differentiation improves student outcomes",
         [
-            "Practice improves performance",
-            "Practice is useless",
-            "Students fail",
-            "Learning ends"
+            "Differentiation improves student outcomes",
+            "Teaching is easy",
+            "Students do not learn",
+            "Instruction does not matter"
         ],
-        "Inference = logical conclusion."
+        "Inference requires drawing a conclusion based on evidence."
     );
 }
 
-// WRITING
+// Writing
 function writingQ(test){
     return buildQ(test,"Grammar",
-        "Which sentence is correct?",
+        "Which sentence is grammatically correct?",
         "Each student has a book.",
         [
             "Each student has a book.",
             "Each students have books.",
-            "Student have book.",
+            "Student have books.",
             "Students has books."
         ],
-        "Singular subject → singular verb."
+        "Singular subjects require singular verbs."
     );
 }
 
-// GENERATE
+function buildQ(test,domain,question,answer,options,rationale){
+    return {
+        domain,
+        question:`Praxis ${test}: ${question}`,
+        options: shuffle(options.map(o=>({display:o,value:o}))),
+        answer,
+        rationale
+    };
+}
+
 function generate(type,count,test,difficulty){
     let arr=[];
     for(let i=0;i<count;i++){
@@ -290,7 +217,6 @@ function generate(type,count,test,difficulty){
     return arr;
 }
 
-// START
 function start(){
     let mode=document.getElementById("mode").value;
     let difficulty=document.getElementById("difficulty").value;
@@ -316,12 +242,12 @@ function start(){
     show();
 }
 
-// SHOW
 function show(){
     let q=questions[current];
 
     document.getElementById("progress").innerText =
         `Question ${current+1}/${questions.length}`;
+
     document.getElementById("domain").innerText="Domain: "+q.domain;
     document.getElementById("question").innerHTML=q.question;
 
@@ -338,11 +264,9 @@ function show(){
         div.appendChild(btn);
     });
 
-    document.getElementById("feedback").innerText="";
-    document.getElementById("nextBtn").classList.add("hidden");
+    MathJax.typeset(); // ✅ render math
 }
 
-// CHECK
 function check(ans){
     let q=questions[current];
     let fb=document.getElementById("feedback");
@@ -356,23 +280,21 @@ function check(ans){
         wrong++;
         fb.className="incorrect";
         fb.innerHTML=`❌ Incorrect<br>Answer: ${q.answer}<br>${q.rationale}`;
+        MathJax.typeset();
         updateMastery(q.domain,false);
     }
 
     document.getElementById("nextBtn").classList.remove("hidden");
 }
 
-// NEXT
 function next(){
     document.getElementById("feedback").innerText="";
     document.getElementById("nextBtn").classList.add("hidden");
-
     current++;
     if(current<questions.length) show();
     else end();
 }
 
-// MASTER TRACK
 function updateMastery(domain,isCorrect){
     if(!mastery[domain]) mastery[domain]={correct:0,total:0};
     mastery[domain].total++;
@@ -380,7 +302,6 @@ function updateMastery(domain,isCorrect){
     localStorage.setItem("praxis_mastery", JSON.stringify(mastery));
 }
 
-// END
 function end(){
     document.getElementById("quiz").classList.add("hidden");
     document.getElementById("results").classList.remove("hidden");
@@ -391,7 +312,6 @@ function end(){
     renderMastery();
 }
 
-// RENDER
 function renderMastery(){
     let div=document.getElementById("mastery");
     div.innerHTML="";
@@ -403,7 +323,7 @@ function renderMastery(){
         div.innerHTML+=`
         <p>${d}: ${p}%</p>
         <div class="bar-bg">
-        <div class="bar-fill" style="width:${p}%"></div>
+            <div class="bar-fill" style="width:${p}%"></div>
         </div>`;
     }
 }
@@ -411,6 +331,7 @@ function renderMastery(){
 function shuffle(arr){
     return arr.sort(()=>Math.random()-0.5);
 }
+
 </script>
 
 </body>
