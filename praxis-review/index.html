@@ -2,46 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Praxis Review App (Offline AI)</title>
+<title>Praxis Review App</title>
 
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background: #f4f7fb;
-    margin: 0;
-    text-align: center;
-}
-
-.container {
-    max-width: 800px;
-    margin: auto;
-    padding: 20px;
-}
-
-.card {
-    background: white;
-    padding: 20px;
-    margin: 15px 0;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-button {
-    padding: 10px 15px;
-    margin: 5px;
-    border: none;
-    border-radius: 6px;
-    background: #0078d4;
-    color: white;
-    cursor: pointer;
-}
-
-button:hover { background: #005fa3; }
-
-.correct { color: green; font-weight: bold; }
-.incorrect { color: red; font-weight: bold; }
-
-.hidden { display: none; }
+body { font-family: Arial; background:#f4f7fb; text-align:center; }
+.container { max-width:800px; margin:auto; padding:20px; }
+.card { background:white; padding:20px; margin:15px 0; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+button { padding:10px; margin:5px; background:#0078d4; color:white; border:none; border-radius:5px; cursor:pointer;}
+button:hover { background:#005a9e; }
+.correct { color:green; font-weight:bold; }
+.incorrect { color:red; font-weight:bold; }
+.hidden { display:none; }
 </style>
 </head>
 
@@ -49,17 +20,22 @@ button:hover { background: #005fa3; }
 
 <div class="container">
 
-<h1>Praxis Review (Offline Mode)</h1>
+<h1>Praxis Review App</h1>
 
 <div class="card" id="setup">
 <h3>Start Practice</h3>
 
-<select id="testType">
-<option value="math">Core Math</option>
-<option value="reading">Core Reading</option>
-<option value="writing">Core Writing</option>
+<label>Praxis Test Number:</label><br>
+<input type="text" id="testNumber" placeholder="e.g., 5733"><br><br>
+
+<label>Category:</label><br>
+<select id="category">
+<option value="math">Mathematics</option>
+<option value="reading">Reading</option>
+<option value="writing">Writing</option>
 </select><br><br>
 
+<label>Number of Questions:</label><br>
 <input type="number" id="numQ" value="5" min="1" max="20"><br><br>
 
 <button onclick="start()">Start</button>
@@ -82,58 +58,60 @@ button:hover { background: #005fa3; }
 </div>
 
 <script>
-
 let questions = [];
 let current = 0;
 let correct = 0;
 let wrong = 0;
 
-// QUESTION GENERATORS
-function generateMathQ() {
-    let a = Math.floor(Math.random()*10);
-    let b = Math.floor(Math.random()*10);
-    let answer = a + b;
+// GENERATORS
+function generateMathQ(testNum) {
+    let a = Math.floor(Math.random()*20);
+    let b = Math.floor(Math.random()*20);
+    let answer = String(a + b);
 
     return {
-        question: `What is ${a} + ${b}?`,
-        options: shuffle([answer, answer+1, answer-1, answer+2]),
-        answer: String(answer),
-        rationale: `Add ${a} and ${b} to get ${answer}.`
+        question: `Praxis ${testNum}: What is ${a} + ${b}?`,
+        options: shuffle([
+            answer,
+            String(a+b+1),
+            String(a+b-1),
+            String(a+b+2)
+        ]),
+        answer: answer,
+        rationale: `Add ${a} and ${b}. ${a} + ${b} = ${answer}.`
     };
 }
 
-function generateReadingQ() {
+function generateReadingQ(testNum) {
     const passages = [
         {
-            text: "The sun provides energy for life on Earth.",
-            question: "What is the main idea?",
-            answer: "The sun is essential for life"
+            text: "Effective teachers adjust instruction to meet student needs.",
+            answer: "Teachers should adapt instruction"
         },
         {
-            text: "Reading daily improves vocabulary skills.",
-            question: "What is the main idea?",
-            answer: "Reading helps vocabulary"
+            text: "Practicing reading improves comprehension skills.",
+            answer: "Practice improves comprehension"
         }
     ];
 
     let p = passages[Math.floor(Math.random()*passages.length)];
 
     return {
-        question: `${p.text} ${p.question}`,
+        question: `Praxis ${testNum}: ${p.text} What is the main idea?`,
         options: shuffle([
             p.answer,
-            "The sun is a star",
-            "Books are useful",
-            "Vocabulary is hard"
+            "Teaching is difficult",
+            "Reading is optional",
+            "Students dislike learning"
         ]),
         answer: p.answer,
-        rationale: "The main idea summarizes the key point of the sentence."
+        rationale: "The main idea is the central message of the sentence."
     };
 }
 
-function generateWritingQ() {
+function generateWritingQ(testNum) {
     return {
-        question: "Which sentence is grammatically correct?",
+        question: `Praxis ${testNum}: Which sentence is grammatically correct?`,
         options: shuffle([
             "She doesn't like apples.",
             "She don't like apples.",
@@ -141,33 +119,33 @@ function generateWritingQ() {
             "She doesn't likes apples."
         ]),
         answer: "She doesn't like apples.",
-        rationale: "Use 'doesn't' with base verb form."
+        rationale: "Use 'doesn't' with the base form of the verb."
     };
 }
 
-function generateQuestions(type, count) {
+// GENERATE SET
+function generateQuestions(type, count, testNum) {
     let qs = [];
-    for (let i=0; i<count; i++) {
-        if (type === "math") qs.push(generateMathQ());
-        if (type === "reading") qs.push(generateReadingQ());
-        if (type === "writing") qs.push(generateWritingQ());
+    for (let i = 0; i < count; i++) {
+        if (type === "math") qs.push(generateMathQ(testNum));
+        if (type === "reading") qs.push(generateReadingQ(testNum));
+        if (type === "writing") qs.push(generateWritingQ(testNum));
     }
     return qs;
 }
 
 // SHUFFLE
 function shuffle(arr) {
-    return arr.map(v => ({v, r: Math.random()}))
-        .sort((a,b)=>a.r-b.r)
-        .map(({v})=>v);
+    return arr.sort(() => Math.random() - 0.5);
 }
 
 // START
 function start() {
-    const type = document.getElementById("testType").value;
-    const num = document.getElementById("numQ").value;
+    const type = document.getElementById("category").value;
+    const num = parseInt(document.getElementById("numQ").value);
+    const testNum = document.getElementById("testNumber").value || "General";
 
-    questions = generateQuestions(type, num);
+    questions = generateQuestions(type, num, testNum);
 
     document.getElementById("setup").classList.add("hidden");
     document.getElementById("quiz").classList.remove("hidden");
@@ -175,7 +153,7 @@ function start() {
     show();
 }
 
-// SHOW Q
+// SHOW
 function show() {
     let q = questions[current];
 
@@ -190,7 +168,7 @@ function show() {
     q.options.forEach(opt => {
         let btn = document.createElement("button");
         btn.innerText = opt;
-        btn.onclick = () => check(opt);
+        btn.onclick = () => check(String(opt));
         div.appendChild(btn);
     });
 
@@ -203,7 +181,7 @@ function check(ans) {
     let q = questions[current];
     let fb = document.getElementById("feedback");
 
-    if (ans === q.answer) {
+    if (String(ans) === String(q.answer)) {
         correct++;
         fb.className = "correct";
         fb.innerText = "✅ Correct!";
@@ -211,28 +189,27 @@ function check(ans) {
         wrong++;
         fb.className = "incorrect";
         fb.innerHTML = `❌ Incorrect<br>
-            Correct Answer: ${q.answer}<br>
-            ${q.rationale}<br><br>`;
+        Correct Answer: ${q.answer}<br>
+        ${q.rationale}<br><br>`;
 
-        let reviewBtn = document.createElement("button");
-        reviewBtn.innerText = "Review This Concept";
-        reviewBtn.onclick = () => {
-            alert("Tip: Reread explanation and try a similar problem.");
-        };
-        fb.appendChild(reviewBtn);
+        let review = document.createElement("button");
+        review.innerText = "Review Concept";
+        review.onclick = () => alert("Review tip: Revisit the explanation and try another similar question.");
+        fb.appendChild(review);
     }
 
-    localStorage.setItem("praxisStats",
-        JSON.stringify({correct, wrong}));
-
+    localStorage.setItem("praxisStats", JSON.stringify({correct, wrong}));
     document.getElementById("nextBtn").classList.remove("hidden");
 }
 
 // NEXT
 function next() {
     current++;
-    if (current < questions.length) show();
-    else end();
+    if (current < questions.length) {
+        show();
+    } else {
+        end();
+    }
 }
 
 // END
@@ -248,3 +225,4 @@ function end() {
 
 </body>
 </html>
+``
